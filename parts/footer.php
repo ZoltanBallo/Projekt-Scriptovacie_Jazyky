@@ -1,18 +1,24 @@
 <?php
 
-    include_once "functions.php";
+include_once "Classes/database.php";
+include_once "Classes/helpers.php";
+include_once "Classes/tour.php";
 
-    use tours\Functions;
+use tours\Database;
+use tours\Helpers;
+use tours\Tour;
 
-    $tours = new Functions();
-    $menu = $tours->getData("SELECT path,name FROM menu");
-    $popularDestinations = $tours->getData("SELECT destination FROM destination where top=1 limit 6");
+$tours = new Tour();
+
+$menu = Database::getData("SELECT path,name FROM menu");
+$popularDestinations = Database::getData("SELECT destination FROM destination where top=1 limit 6");
+
 ?>
 
 <footer class="footer-copyright">
     <?php
         $class = ["container", "footer-content", "row", "col-sm-3", "single-footer-item", "footer-logo"];
-        $tours->divClassGenerator($class);
+        Helpers::divClassGenerator($class);
     ?>
     <a href="index.php">
         Bálló<span>Tour</span>
@@ -21,8 +27,8 @@
         best travel agency
     </p>
     <?php
-        $tours->divCloser(3);
-        $tours->divClassGenerator(["col-sm-3", "single-footer-item"]);
+        Helpers::divCloser(3);
+        Helpers::divClassGenerator(["col-sm-3", "single-footer-item"]);
     ?>
     <h2>link</h2>
     <div class="single-footer-txt">
@@ -30,8 +36,8 @@
             foreach ($menu as $item) {
                 echo '<p><a href="' . $item['path'] . '">' . $item['name'] . '</a></p>';
             }
-            $tours->divCloser(3);
-            $tours->divClassGenerator(["col-sm-3", "single-footer-item"]);
+            Helpers::divCloser(3);
+            Helpers::divClassGenerator(["col-sm-3", "single-footer-item"]);
         ?>
         <h2>popular destination</h2>
         <div class="single-footer-txt">
@@ -40,8 +46,8 @@
                     echo '<p><a href="index.php#gallery">' . $item['destination'] . '</a></p>';
                 }
 
-                $tours->divCloser(3);
-                $tours->divClassGenerator(["col-sm-3", "single-footer-item text-center"]);
+                Helpers::divCloser(3);
+                Helpers::divClassGenerator(["col-sm-3", "single-footer-item text-center"]);
             ?>
             <h2 class="text-left">contact</h2>
             <div class="single-footer-txt text-left">
@@ -55,7 +61,7 @@
 
 
                 <?php
-                    $tours->divCloser(5);
+                    Helpers::divCloser(5);
                 ?>
                 <hr>
                 <div class="foot-icons ">
@@ -83,6 +89,6 @@
                        data-placement="top" title="" data-original-title="Back to Top"
                        aria-hidden="true"></i>
                     <?php
-                        $tours->divCloser(3);
+                        Helpers::divCloser(3);
                     ?>
 </footer><!-- /.footer-copyright-->

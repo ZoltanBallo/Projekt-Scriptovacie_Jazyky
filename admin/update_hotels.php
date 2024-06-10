@@ -1,38 +1,53 @@
 <!doctype html>
 <html class="no-js" lang="en">
 <?php
-    include_once "../parts/head.php";
-    include_once "../functions.php";
+include_once "../parts/head.php";
+include_once "../Classes/database.php";
 
-    use tours\Functions;
+$pdo = getDatabaseConnection(); // Function to get DB connection from your db connection file
 
-    $tours = new Functions();
-    $food = $tours->getData("SELECT id, type from food;");
-    $success_path = 'Location: ../admin.php?set=hotels&hotel=';
-    $error_path = 'Location: error.html';
+$food = [];
+$query = "SELECT id, type FROM food";
+$stmt = $pdo->prepare($query);
+$stmt->execute();
+$food = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    if (isset($_POST['update'])) {
-        $update = $tours->updateHotels(
-            $_POST['id_number'],
-            $_POST['hotel_name'],
-            $_POST['stars'],
-            $_POST['food_choice']
-        );
-        if ($update) {
-            header($success_path . urlencode($_POST['hotel_name']));
-        } else {
-            header($error_path);
-        }
+if (isset($_POST['update'])) {
+    $id = intval($_POST['id_number']);
+    $hotel_name = htmlspecialchars($_POST['hotel_name']);
+    $stars = intval($_POST['stars']);
+    $food_choice = intval($_POST['food_choice']);
+
+    $updateQuery = "UPDATE hotels SET hotel_name = ?, stars = ?, id_service = ? WHERE id = ?";
+    $updateStmt = $pdo->prepare($updateQuery);
+    $updateSuccess = $updateStmt->execute([$hotel_name, $stars, $food_choice, $id]);
+
+    if ($updateSuccess) {
+        header('Location: ../admin.php?set=hotels&hotel=' . urlencode($hotel_name));
+        exit();
+    } else {
+        header('Location: error.html');
+        exit();
     }
+}
 
-    if (isset($_POST['create'])) {
-        $add = $tours->addHotel($_POST['hotel_name'], $_POST['stars'], $_POST['food_choice']);
-        if ($add) {
-            header($success_path . urlencode($_POST['hotel_name']));
-        } else {
-            header($error_path);
-        }
+if (isset($_POST['create'])) {
+    $hotel_name = htmlspecialchars($_POST['hotel_name']);
+    $stars = intval($_POST['stars']);
+    $food_choice = intval($_POST['food_choice']);
+
+    $addQuery = "INSERT INTO hotels (hotel_name, stars, id_service) VALUES (?, ?, ?)";
+    $addStmt = $pdo->prepare($addQuery);
+    $addSuccess = $addStmt->execute([$hotel_name, $stars, $food_choice]);
+
+    if ($addSuccess) {
+        header('Location: ../admin.php?set=hotels&hotel=' . urlencode($hotel_name));
+        exit();
+    } else {
+        header('Location: error.html');
+        exit();
     }
+}
 ?>
 
 <head>
@@ -65,75 +80,59 @@
 
 <div style="display: flex; justify-content: center;">
     <div id="formular">
-        <?php
-            if (isset($_GET['id'])) {
-                $data = $tours->getItem(
-                    "SELECT id, hotel_name, starts, id_service from hotels where id='" . $_GET['id'] . "'"
-                ); ?>
-                <form action="update_hotels.php" method="post">
-                    <?php
-                        $label_for = ["hotel_name", "starts"];
-                        $name = ["Hotel name:", "Stars (1-5)"];
-                        $id_name = ["hotel_name", "stars"];
-                        for ($i = 0; $i < 2; $i++) {
-                            echo '<div class="form-group">';
-                            echo '<label for="' . $label_for[$i] . '">' . $name[$i] . '</label>';
-                            echo '<input type="text" class="form-control" id="' . $id_name[$i] . '" name="' . $id_name[$i] . '" value="' . $data[$label_for[$i]] . '">';
-                            echo '</div>';
-                        }
-                    ?>
+        <?php if (isset($_GET['id'])): 
+            $id = intval($_GET['id']);
+            $hotelQuery = "SELECT * FROM hotels WHERE id = ?";
+            $hotelStmt = $pdo->prepare($hotelQuery);
+            $hotelStmt->execute([$id]);
+            $hotel = $hotelStmt->fetch(PDO::FETCH_ASSOC);
 
+            if ($hotel): ?>
+                <h3>Update Hotel</h3>
+                <form action="update_hotels.php" method="post">
+                    <input type="hidden" name="id_number" value="<?= $hotel['id'] ?>">
                     <div class="form-group">
-                        <label for="food">Food</label><br>
-                        <select class="form-control" name="food_choice">
-                            <?php
-                                foreach ($food as $item) {
-                                    if ($item['id'] == $data['id_service']) {
-                                        echo '<option value="' . $item["id"] . '" selected>' . $item['type'] . '</option>';
-                                    } else {
-                                        echo '<option value="' . $item["id"] . '">' . $item['type'] . '</option>';
-                                    }
-                                }
-                            ?>
+                        <label for="hotel">Hotel name:</label>
+                        <input type="text" class="form-control" id="hotel" name="hotel_name" value="<?= $hotel['hotel_name'] ?>" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="stars">Stars:</label>
+                        <input type="number" class="form-control" id="stars" name="stars" value="<?= $hotel['stars'] ?>" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="food">Food service:</label>
+                        <select class="form-control" name="food_choice" required>
+                            <?php foreach ($food as $item): ?>
+                                <option value="<?= $item['id'] ?>" <?= $hotel['id_service'] == $item['id'] ? 'selected' : '' ?>><?= $item['type'] ?></option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
-
-                    <input type="hidden" name="id_number" value="<?php
-                        echo $data['id']; ?>">
                     <button type="submit" id="update" name="update" class="btn btn-default">Submit</button>
                 </form>
-
-                <?php
-            } else { ?>
-                <form action="update_hotels.php" method="post">
-                    <?php
-                        $label_for = ["hotel_name", "starts"];
-                        $name = ["Hotel name:", "Stars (1-5)"];
-                        $id_name = ["hotel_name", "stars"];
-                        for ($i = 0; $i < 2; $i++) {
-                            echo '<div class="form-group">';
-                            echo '<label for="' . $label_for[$i] . '">' . $name[$i] . '</label>';
-                            echo '<input type="text" class="form-control" id="' . $id_name[$i] . '" name="' . $id_name[$i] . '" required>';
-                            echo '</div>';
-                        }
-                    ?>
-
-                    <div class="form-group">
-                        <label for="food">Food</label><br>
-                        <select class="form-control" name="food_choice">
-                            <?php
-                                foreach ($food as $item) {
-                                    echo '<option value="' . $item["id"] . '">' . $item['type'] . '</option>';
-                                }
-                            ?>
-                        </select>
-                    </div>
-                    <button type="submit" id="create" name="create" class="btn btn-default">Submit</button>
-                </form>
-            <?php
-            } ?>
-
-        <?php
-            $tours->divCloser(2); ?>
+            <?php endif; ?>
+        <?php else: ?>
+            <h3>Create Hotel</h3>
+            <form action="update_hotels.php" method="post">
+                <div class="form-group">
+                    <label for="hotel">Hotel name:</label>
+                    <input type="text" class="form-control" id="hotel" name="hotel_name" required>
+                </div>
+                <div class="form-group">
+                    <label for="stars">Stars:</label>
+                    <input type="number" class="form-control" id="stars" name="stars" required>
+                </div>
+                <div class="form-group">
+                    <label for="food">Food service:</label>
+                    <select class="form-control" name="food_choice" required>
+                        <?php foreach ($food as $item): ?>
+                            <option value="<?= $item['id'] ?>"><?= $item['type'] ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <button type="submit" id="create" name="create" class="btn btn-default">Submit</button>
+            </form>
+        <?php endif; ?>
+    </div>
+</div>
 </body>
 </html>

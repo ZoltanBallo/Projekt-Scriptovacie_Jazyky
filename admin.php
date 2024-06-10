@@ -10,10 +10,11 @@ if (isset($_GET['what'])) {
 }
 
 include_once "parts/head.php";
-include_once "functions.php";
-use tours\Functions;
+include_once "Classes/helpers.php";
+include_once "Classes/tour.php";
+use tours\Helpers;
 
-$tours = new Functions();
+$tours = new Helpers();
 $destinations = $tours->getData("SELECT destination.id, destination.destination, destination.top, destination.days, destination.transportation, hotels.hotel_name as hotel, destination.price_per_day, SUBSTRING(destination.img_path, 1, 40) as img_path FROM destination inner join hotels on hotels.id=destination.hotel_id;");
 $hotels = $tours->getData("SELECT hotels.id, hotels.hotel_name as hotel_name, hotels.starts as starts, food.type as food from hotels inner join food on hotels.id_service=food.id;");
 $comments = $tours->getData("SELECT * from client_review;");
@@ -182,7 +183,7 @@ $discounts = $tours->getData("SELECT offers.id, destination.destination, destina
 <h1 class="text-center pb-3">Page management</h1>
 
 
-            <?php $tours->divClassGenerator(["container","row","col-md-offset-3 col-md-6"]); ?>
+            <?php Helpers::divClassGenerator(["container","row","col-md-offset-3 col-md-6"]); ?>
             <div class="panel-group" id="accordion" role="tablist" aria-multiselectable="true">
                 <div class="panel panel-default">
                     <div class="panel-heading" role="tab" id="headingOne">
@@ -250,7 +251,7 @@ $discounts = $tours->getData("SELECT offers.id, destination.destination, destina
 											<a href="admin/add_tour.php">➕add</a></td>      
                                 </tr>
                             </table>
-                        <?php  $tours->divCloser(3); ?>
+                        <?php  Helpers::divCloser(3); ?>
 
 
                 <div class="panel panel-default">
@@ -290,7 +291,7 @@ $discounts = $tours->getData("SELECT offers.id, destination.destination, destina
                                         echo '<td> ' . $item['hotel_name'] . ' </td>';
                                     }
                                     echo '
-									  <td> ' . $tours->starGenerator($item['starts']) . " " . $item['starts'] . " stars" . ' </td>
+									  <td> ' . Helpers::starGenerator($item['starts']) . " " . $item['starts'] . " stars" . ' </td>
 									  <td> ' . $item['food'] . ' </td>
 									  <td> <a href="admin/update_hotels.php?id=' . $item['id'] . '"><div class="update-icon"></div></a> </td>
 									  <td> <a href="admin/delete.php?id=' . $item['id'] . '&what=hotels&data=' . $item['hotel_name'] . '" onclick="return confirm(\'Are you sure you want to delete hotel ' . $item['hotel_name'] . '?\');"><div class="delete-icon"></div></a> </td>
@@ -304,7 +305,7 @@ $discounts = $tours->getData("SELECT offers.id, destination.destination, destina
                             </table>
 
 
-                 <?php $tours->divCloser(3); ?>
+                 <?php Helpers::divCloser(3); ?>
 				
 				
 				<div class="panel panel-default">
@@ -349,7 +350,6 @@ $discounts = $tours->getData("SELECT offers.id, destination.destination, destina
 									  <td> ' . $item['description'] . '... </td>
 									  <td> <a href="admin/update_offers.php?id=' . $item['id'] . '"><div class="update-icon"></div></a> </td>
 									  <td> <a href="admin/delete.php?id=' . $item['id'] . '&what=offers&data=' . $item['destination'] . '" onclick="return confirm(\'Are you sure you want to delete discount ' . $item['destination']  . '?\');"><div class="delete-icon"></div></a> </td>
-									 
 									 </tr>';
                                 }
                                 ?>
@@ -358,50 +358,13 @@ $discounts = $tours->getData("SELECT offers.id, destination.destination, destina
                                     </td>
                                 </tr>
                             </table>
-							
-							
-                <?php  $tours->divCloser(3); ?>
-				
 
-                <div class="panel panel-default">
-                    <div class="panel-heading" role="tab" id="headingFour">
-                        <h4 class="panel-title">
-                            <a class="collapsed last" role="button" data-toggle="collapse" data-parent="#accordion"
-                               href="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
-                                Delete inappropriate reviews
-                                <span> </span>
-                            </a>
-                        </h4>
+							
+
+                        </div>
                     </div>
-                    <div id="collapseFour" class="panel-collapse collapse" role="tabpanel"
-                         aria-labelledby="headingFour">
-                        <div class="panel-body">
-                           
-
-							<table class="table">
-                                <tr style="background-color: rgba(255, 0, 0, 0.3);">
-                                    <?php
-                                        $name=["name", "e-mail", "message", "remove"];
-                                        foreach($name as $item){
-                                            echo '<th>'.$item.'</th>';
-                                        }
-                                    ?>
-                                </tr>
-
-                                <?php
-                                foreach ($comments as $item) {
-                                    echo '
-									  <td> ' . $item['name'] . ' </td>
-									  <td> ' . $item['mail'] . ' </td>
-									  <td> ' . $item['message'] . ' </td>
-									  <td> <a href="admin/delete.php?id=' . $item['id'] . '&what=client_review&data=' . $item['name'] . '" onclick="return confirm(\'Are you sure you want to delete client review from ' . $item['name'] . '?\');"><div class="delete-icon"></div></a> </td>
-									 </tr>';
-                                }
-                                ?>
-                            </table>
-                <?php $tours->divCloser(7);?>
-
-
-<?php include_once "parts/script.php"; ?>
-</body>
-</html>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

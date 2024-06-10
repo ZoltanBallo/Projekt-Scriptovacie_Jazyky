@@ -1,23 +1,32 @@
 <?php
-    include_once "functions.php";
-    use tours\Functions;
+    include_once "Classes/database.php";
+    include_once "Classes/helpers.php";
+    include_once "Classes/tour.php";
 
-    $tours = new Functions();
-    $menu = $tours->getData("SELECT path, name FROM menu");
+    use tours\Database;
+    use tours\Helpers;
+    use tours\Tour;
+
+    $tours = new Tour();
+
+    $menuQuery = "SELECT path, name FROM menu";
+    $menuResult = Database::getData($menuQuery);
+    $menu = $menuResult->fetch_all(MYSQLI_ASSOC);
+
 ?>
 <!-- main-menu Start -->
 <header class="top-area">
     <?php
         $class = ["header-area", "container", "row", "col-sm-2", "logo"];
-        $tours->divClassGenerator($class);
+        Helpers::divClassGenerator($class);
     ?>
 
     <a href="index.php">Bálló<span>Tour</span></a>
 
     <?php
-        $tours->divCloser(2);
+        Helpers::divCloser(2);
         $class = ["col-sm-10", "main-menu", "navbar-header"];
-        $tours->divClassGenerator($class);
+        Helpers::divClassGenerator($class);
     ?>
     <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
         <i class="fa fa-bars"></i>
@@ -35,10 +44,10 @@
             </li>
         </ul>
         <?php
-            $tours->divCloser(4);
+            Helpers::divCloser(4);
         ?>
         <div class="home-border">
         <?php
-           $tours->divCloser(3);
+           Helpers::divCloser(3);
         ?>
 </header><!-- /.top-area-->

@@ -1,43 +1,61 @@
 <!doctype html>
 <html class="no-js" lang="en">
 <?php
-    include_once "../parts/head.php";
-    include_once "../functions.php";
+include_once "../parts/head.php";
+include_once "../Classes/database.php";
 
-    use tours\Functions;
+$pdo = getDatabaseConnection(); // Function to get DB connection from your db connection file
 
-    $tours = new Functions();
-    $success_path = 'Location: ../admin.php?set=offers&offer=';
-    $error_path = 'Location: error.html';
+$hotels = [];
+$query = "SELECT id, hotel_name FROM hotels";
+$stmt = $pdo->prepare($query);
+$stmt->execute();
+$hotels = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $destination = $tours->getData("SELECT id, destination from destination;");
+if (isset($_POST['update'])) {
+    $id = intval($_POST['id_number']);
+    $destination = htmlspecialchars($_POST['destination']);
+    $days = intval($_POST['days']);
+    $transportation = intval($_POST['transportation']);
+    $hotel_choice = intval($_POST['hotel_choice']);
+    $price = floatval($_POST['price']);
+    $image_url = filter_var($_POST['image_url'], FILTER_SANITIZE_URL);
+    $top = intval($_POST['top']);
 
-    if (isset($_POST['update'])) {
-        $update = $tours->updateOffers(
-            $_POST['id_number'],
-            $_POST['destination_choice'],
-            $_POST['discount'],
-            $_POST['description_text']
-        );
-        if ($update) {
-            header($success_path . urlencode($_POST['destination_choice']));
-        } else {
-            header($error_path);
-        }
+    $updateQuery = "UPDATE tours SET destination = ?, days = ?, transportation = ?, hotel_id = ?, price_per_day = ?, img_path = ?, top = ? WHERE id = ?";
+    $updateStmt = $pdo->prepare($updateQuery);
+    $updateSuccess = $updateStmt->execute([$destination, $days, $transportation, $hotel_choice, $price, $image_url, $top, $id]);
+
+    if ($updateSuccess) {
+        header('Location: ../admin.php');
+        exit();
+    } else {
+        header('Location: error.html');
+        exit();
     }
+}
 
-    if (isset($_POST['create'])) {
-        $add = $tours->addOffers(
-            $_POST['destination_choice'],
-            $_POST['discount'],
-            $_POST['dsc']
-        );
-        if ($add) {
-            header($success_path . urlencode($_POST['destination_choice']));
-        } else {
-            header($error_path);
-        }
+if (isset($_POST['create'])) {
+    $destination = htmlspecialchars($_POST['destination']);
+    $days = intval($_POST['days']);
+    $transportation = intval($_POST['transportation']);
+    $hotel_choice = intval($_POST['hotel_choice']);
+    $price = floatval($_POST['price']);
+    $image_url = filter_var($_POST['image_url'], FILTER_SANITIZE_URL);
+    $top = intval($_POST['top']);
+
+    $addQuery = "INSERT INTO tours (destination, days, transportation, hotel_id, price_per_day, img_path, top) VALUES (?, ?, ?, ?, ?, ?, ?)";
+    $addStmt = $pdo->prepare($addQuery);
+    $addSuccess = $addStmt->execute([$destination, $days, $transportation, $hotel_choice, $price, $image_url, $top]);
+
+    if ($addSuccess) {
+        header('Location: ../admin.php');
+        exit();
+    } else {
+        header('Location: error.html');
+        exit();
     }
+}
 ?>
 
 <head>
@@ -67,77 +85,105 @@
 </style>
 <body>
 
-
 <div style="display: flex; justify-content: center;">
     <div id="formular">
-        <?php
-            if (isset($_GET['id'])) {
-                $data = $tours->getItem(
-                    "SELECT offers.id, offers.id_destination, offers.discount, offers.description from offers where offers.id='" . $_GET['id'] . "'"
-                ); ?>
+        <?php if (isset($_GET['id'])): 
+            $id = intval($_GET['id']);
+            $tourQuery = "SELECT * FROM tours WHERE id = ?";
+            $tourStmt = $pdo->prepare($tourQuery);
+            $tourStmt->execute([$id]);
+            $tour = $tourStmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($tour): ?>
+                <h3>Update Tour</h3>
                 <form action="update_offers.php" method="post">
+                    <input type="hidden" name="id_number" value="<?= $tour['id'] ?>">
                     <div class="form-group">
-                        <label for="destination_choice">Destination</label><br>
-                        <select class="form-control" name="destination_choice">
-                            <?php
-                                foreach ($destination as $item) {
-                                    if ($data['id_destination'] == $item['id']) {
-                                        echo '<option value="' . $item["id"] . '" selected>' . $item["destination"] . '</option>';
-                                    } else {
-                                        echo '<option value="' . $item["id"] . '">' . $item["destination"] . '</option>';
-                                    }
-                                }
-                            ?>
+                        <label for="destination">Destination:</label>
+                        <input type="text" class="form-control" id="destination" name="destination" value="<?= $tour['destination'] ?>" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="days">How many days?</label>
+                        <input type="number" class="form-control" id="days" name="days" value="<?= $tour['days'] ?>" required>
+                    </div>
+                    <div class="form-group">
+                        <b>Includes transportation</b><br>
+                        <input type="radio" id="yes" name="transportation" value="1" <?= $tour['transportation'] ? 'checked' : '' ?> required>
+                        <label for="yes">Yes</label><br>
+                        <input type="radio" id="no" name="transportation" value="0" <?= !$tour['transportation'] ? 'checked' : '' ?> required>
+                        <label for="no">No</label><br>
+                    </div>
+                    <div class="form-group">
+                        <label for="hotel">Which hotel?</label><br>
+                        <select class="form-control" name="hotel_choice" required>
+                            <?php foreach ($hotels as $item): ?>
+                                <option value="<?= $item['id'] ?>" <?= $tour['hotel_id'] == $item['id'] ? 'selected' : '' ?>><?= $item['hotel_name'] ?></option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
-
                     <div class="form-group">
-                        <label for="discount">Discount (in %)</label>
-                        <input type="text" class="form-control" id="discount" name="discount" value="<?php
-                            echo $data['discount'] ?>">
+                        <label for="price">Price/day in euros</label>
+                        <input type="number" step="0.01" class="form-control" id="price" name="price" value="<?= $tour['price_per_day'] ?>" required>
                     </div>
-
                     <div class="form-group">
-                        <label for="description">Description about the city</label>
-                        <textarea class="form-control" name="description_text" id="description_text" rows="8"><?php
-                                echo $data['description'] ?></textarea>
+                        <label for="image">URL for image (image path)</label>
+                        <input type="text" class="form-control" id="image" name="image_url" value="<?= $tour['img_path'] ?>" required>
                     </div>
-
-                    <input type="hidden" name="id_number" value="<?php
-                        echo $data['id']; ?>">
+                    <div class="form-group">
+                        <b>It is a top destination?</b><br>
+                        <input type="radio" id="yes2" name="top" value="1" <?= $tour['top'] ? 'checked' : '' ?> required>
+                        <label for="yes2">Yes</label><br>
+                        <input type="radio" id="no2" name="top" value="0" <?= !$tour['top'] ? 'checked' : '' ?> required>
+                        <label for="no2">No</label><br>
+                    </div>
                     <button type="submit" id="update" name="update" class="btn btn-default">Submit</button>
                 </form>
-
-                <?php
-            } else { ?>
-                <form action="update_offers.php" method="post">
-                    <div class="form-group">
-                        <label for="destination_choice">Destination</label><br>
-                        <select class="form-control" name="destination_choice">
-                            <?php
-                                foreach ($destination as $item) {
-                                    echo '<option value="' . $item["id"] . '" >' . $item["destination"] . '</option>';
-                                }
-                            ?>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="discount">Discount (in %)</label>
-                        <input type="text" class="form-control" name="discount" id="discount" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="dsc">Description about the city</label>
-                        <textarea class="form-control" name="dsc" id="dsc" rows="8"></textarea>
-                    </div>
-
-                    <button type="submit" id="update" name="create" class="btn btn-default">Submit</button>
-                </form>
-                <?php
-            } ?>
-
-        <?php
-            $tours->divCloser(2); ?>
+            <?php endif; ?>
+        <?php else: ?>
+            <h3>Create Tour</h3>
+            <form action="update_offers.php" method="post">
+                <div class="form-group">
+                    <label for="destination">Destination:</label>
+                    <input type="text" class="form-control" id="destination" name="destination" required>
+                </div>
+                <div class="form-group">
+                    <label for="days">How many days?</label>
+                    <input type="number" class="form-control" id="days" name="days" required>
+                </div>
+                <div class="form-group">
+                    <b>Includes transportation</b><br>
+                    <input type="radio" id="yes" name="transportation" value="1" required>
+                    <label for="yes">Yes</label><br>
+                    <input type="radio" id="no" name="transportation" value="0" required>
+                    <label for="no">No</label><br>
+                </div>
+                <div class="form-group">
+                    <label for="hotel">Which hotel?</label><br>
+                    <select class="form-control" name="hotel_choice" required>
+                        <?php foreach ($hotels as $item): ?>
+                            <option value="<?= $item['id'] ?>"><?= $item['hotel_name'] ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="price">Price/day in euros</label>
+                    <input type="number" step="0.01" class="form-control" id="price" name="price" required>
+                </div>
+                <div class="form-group">
+                    <label for="image">URL for image (image path)</label>
+                    <input type="text" class="form-control" id="image" name="image_url" required>
+                </div>
+                <div class="form-group">
+                    <b>It is a top destination?</b><br>
+                    <input type="radio" id="yes2" name="top" value="1" required>
+                    <label for="yes2">Yes</label><br>
+                    <input type="radio" id="no2" name="top" value="0" required>
+                    <label for="no2">No</label><br>
+                </div>
+                <button type="submit" id="create" name="create" class="btn btn-default">Submit</button>
+            </form>
+        <?php endif; ?>
+    </div>
+</div>
 </body>
 </html>

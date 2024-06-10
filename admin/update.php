@@ -1,105 +1,137 @@
 <!doctype html>
-<html class="no-js"  lang="en">
+<html class="no-js" lang="en">
 <?php
 include_once "../parts/head.php";
-include_once "../functions.php";
+include_once "../Classes/database.php";
 
-use tours\Functions;
+$pdo = getDatabaseConnection(); // Function to get DB connection from your db connection file
 
-$tours = new Functions();
-$hotels = $tours->getData("SELECT id, hotel_name FROM hotels");
+$food = [];
+$query = "SELECT id, type FROM food";
+$stmt = $pdo->prepare($query);
+$stmt->execute();
+$food = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-if(isset($_POST['update'])) {
-    $update = $tours->updateTours($_POST['id_number'], $_POST['destination'], $_POST['days'], $_POST['transportation'], $_POST['hotel_choice'], $_POST['price'], $_POST['image_url'], $_POST['top']);
-    if($update) {
-       header('Location: ../admin.php?set=destination&place=' . urlencode($_POST['destination']));
+if (isset($_POST['update'])) {
+    $id = intval($_POST['id_number']);
+    $hotel_name = htmlspecialchars($_POST['hotel_name']);
+    $stars = intval($_POST['stars']);
+    $food_choice = intval($_POST['food_choice']);
+
+    $updateQuery = "UPDATE hotels SET hotel_name = ?, stars = ?, id_service = ? WHERE id = ?";
+    $updateStmt = $pdo->prepare($updateQuery);
+    $updateSuccess = $updateStmt->execute([$hotel_name, $stars, $food_choice, $id]);
+
+    if ($updateSuccess) {
+        header('Location: ../admin.php');
+        exit();
     } else {
         header('Location: error.html');
+        exit();
     }
-} 
-else{
-	$data = $tours->getItem("SELECT destination.id, destination.destination, destination.days, destination.transportation, destination.hotel_id as hotel_id, hotels.hotel_name, destination.price_per_day, destination.top, destination.img_path FROM destination INNER JOIN hotels ON destination.hotel_id=hotels.id WHERE destination.id='" . $_GET['id'] . "'");
 }
 
+if (isset($_POST['create'])) {
+    $hotel_name = htmlspecialchars($_POST['hotel_name']);
+    $stars = intval($_POST['stars']);
+    $food_choice = intval($_POST['food_choice']);
 
+    $addQuery = "INSERT INTO hotels (hotel_name, stars, id_service) VALUES (?, ?, ?)";
+    $addStmt = $pdo->prepare($addQuery);
+    $addSuccess = $addStmt->execute([$hotel_name, $stars, $food_choice]);
+
+    if ($addSuccess) {
+        header('Location: ../admin.php');
+        exit();
+    } else {
+        header('Location: error.html');
+        exit();
+    }
+}
 ?>
 
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
-  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
 </head>
 
 <style>
-body{
-	background-image: url(../assets/images/admin_bg_31.jpg);
-	background-repeat: repeat-y;
-	background-position: center;
-	background-size: cover;
-}
+    body {
+        background-image: url(../assets/images/admin_bg_31.jpg);
+        background-repeat: repeat-y;
+        background-position: center;
+        background-size: cover;
+    }
 
-#formular{
-   font-size:20px;
-   color: black;
-   background-color: hsla(0, 100%, 90%, 0.7);
-   width: 50%; padding: 20px; border: 1px solid black;
-   margin-top: 20px;
-}
+    #formular {
+        font-size: 20px;
+        color: black;
+        background-color: hsla(0, 100%, 90%, 0.7);
+        width: 50%;
+        padding: 20px;
+        border: 1px solid black;
+        margin-top: 20px;
+    }
 </style>
 <body>
 
-
 <div style="display: flex; justify-content: center;">
-  <div id="formular">
-    <form action="update.php" method="post">
-      <div class="form-group">
-        <label for="destination">Destination:</label>
-        <input type="text" class="form-control" id="destination" name="destination" value="<?php echo $data['destination'] ?>">
-      </div>
-      <div class="form-group">
-        <label for="days">How many days?</label>
-        <input type="text" class="form-control" id="days" name="days" value="<?php echo $data['days'] ?>">
-      </div>
-      <div class="form-group">
-        <b>Includes transportation</b><br>
-        <input type="radio" id="yes" name="transportation" value="1" <?php if ($data['transportation'] == 1) echo 'checked'?>>
-        <label for="yes">Yes</label><br>
-        <input type="radio" id="no" name="transportation" value="0" <?php if ($data['transportation'] == 0) echo 'checked'?>>
-        <label for="no">No</label><br>  
-      </div>
-      <div class="form-group">
-        <label for="hotel">Which hotel?</label><br>
-        <select class="form-control" name="hotel_choice"> 
-        <?php 
-        foreach ($hotels as $item) {
-		  if($item['id']==$data['hotel_id']){
-			 echo '<option value="' . $item["id"] . '" selected>' . $item['hotel_name'] . '</option>';
-		  }
-		  else{ echo '<option value="' . $item["id"] . '">' . $item['hotel_name'] . '</option>'; }
-        }
-        ?>
-        </select>
-      </div>
-      <div class="form-group">
-        <label for="price">Price/day in euros</label>
-        <input type="text" class="form-control" id="price" name="price" value="<?php echo $data['price_per_day'] ?>">
-      </div>
-      <div class="form-group">
-        <label for="image">URL for image (image path)</label>
-        <input type="text" class="form-control" id="image" name="image_url" value="<?php echo $data['img_path'] ?>">
-      </div>
-      <div class="form-group">
-        <b>It is a top destination?</b><br>
-        <input type="radio" id="yes2" name="top" value="1" <?php if ($data['top'] == 1) echo 'checked'?>>
-        <label for="yes2">Yes</label><br>
-        <input type="radio" id="no2" name="top" value="0" <?php if ($data['top'] == 0) echo 'checked'?>>
-        <label for="no2">No</label><br>  
-      </div>
-	  <input type="hidden" name="id_number" value="<?php echo $data['id']; ?>">
-      <button type="submit" id="update" name="update" class="btn btn-default">Submit</button>
-    </form>
-  </div>
+    <div id="formular">
+        <?php if (isset($_GET['id'])):
+            $id = intval($_GET['id']);
+            $hotelQuery = "SELECT * FROM hotels WHERE id = ?";
+            $hotelStmt = $pdo->prepare($hotelQuery);
+            $hotelStmt->execute([$id]);
+            $hotel = $hotelStmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($hotel): ?>
+                <h3>Update Hotel</h3>
+                <form action="update.php" method="post">
+                    <input type="hidden" name="id_number" value="<?= $hotel['id'] ?>">
+                    <div class="form-group">
+                        <label for="hotel">Hotel name:</label>
+                        <input type="text" class="form-control" id="hotel" name="hotel_name" value="<?= $hotel['hotel_name'] ?>" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="stars">Stars:</label>
+                        <input type="number" class="form-control" id="stars" name="stars" value="<?= $hotel['stars'] ?>" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="food">Food service:</label>
+                        <select class="form-control" name="food_choice" required>
+                            <?php foreach ($food as $item): ?>
+                                <option value="<?= $item['id'] ?>" <?= $hotel['id_service'] == $item['id'] ? 'selected' : '' ?>><?= $item['type'] ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <button type="submit" id="update" name="update" class="btn btn-default">Submit</button>
+                </form>
+            <?php endif; ?>
+        <?php else: ?>
+            <h3>Create Hotel</h3>
+            <form action="update.php" method="post">
+                <div class="form-group">
+                    <label for="hotel">Hotel name:</label>
+                    <input type="text" class="form-control" id="hotel" name="hotel_name" required>
+                </div>
+                <div class="form-group">
+                    <label for="stars">Stars:</label>
+                    <input type="number" class="form-control" id="stars" name="stars" required>
+                </div>
+                <div class="form-group">
+                    <label for="food">Food service:</label>
+                    <select class="form-control" name="food_choice" required>
+                        <?php foreach ($food as $item): ?>
+                            <option value="<?= $item['id'] ?>"><?= $item['type'] ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <button type="submit" id="create" name="create" class="btn btn-default">Submit</button>
+            </form>
+        <?php endif; ?>
+    </div>
 </div>
 </body>
 </html>
